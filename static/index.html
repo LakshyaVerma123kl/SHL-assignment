@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>SHL Assessment Architect</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .brand-gradient {
+        background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+      }
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+      }
+      .slide-up {
+        animation: slideUp 0.5s ease-out forwards;
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      @keyframes slideUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-slate-100 min-h-screen text-slate-800 font-sans">
+    <nav class="brand-gradient text-white shadow-lg sticky top-0 z-50">
+      <div
+        class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center"
+      >
+        <div class="flex items-center gap-3">
+          <i class="fa-solid fa-layer-group text-2xl text-blue-400"></i>
+          <div>
+            <h1 class="text-xl font-bold tracking-wide">SHL Architect</h1>
+            <p class="text-xs text-slate-400 uppercase tracking-wider">
+              Assessment Recommendation Engine
+            </p>
+          </div>
+        </div>
+        <div
+          class="text-xs bg-blue-500/20 px-3 py-1 rounded-full border border-blue-500/30"
+        >
+          v2.0 Enterprise
+        </div>
+      </div>
+    </nav>
+
+    <main
+      class="max-w-6xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-8"
+    >
+      <div class="lg:col-span-4 space-y-6">
+        <div
+          class="bg-white p-1 rounded-xl shadow-sm border border-slate-200 flex"
+        >
+          <button
+            onclick="switchMode('manual')"
+            id="tab-manual"
+            class="flex-1 py-2.5 text-sm font-semibold rounded-lg bg-slate-800 text-white shadow transition-all"
+          >
+            <i class="fa-solid fa-keyboard mr-2"></i>Manual
+          </button>
+          <button
+            onclick="switchMode('upload')"
+            id="tab-upload"
+            class="flex-1 py-2.5 text-sm font-semibold rounded-lg text-slate-500 hover:bg-slate-50 transition-all"
+          >
+            <i class="fa-solid fa-file-pdf mr-2"></i>Resume
+          </button>
+        </div>
+
+        <div
+          id="panel-manual"
+          class="glass-panel p-6 rounded-xl shadow-md border border-slate-200"
+        >
+          <form id="form-manual" class="space-y-5">
+            <div>
+              <label
+                class="block text-xs font-bold uppercase text-slate-500 mb-1"
+                >Job Role</label
+              >
+              <input
+                type="text"
+                id="inp-role"
+                placeholder="e.g. Senior Java Developer"
+                required
+                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-800 focus:border-transparent outline-none transition"
+              />
+            </div>
+            <div>
+              <label
+                class="block text-xs font-bold uppercase text-slate-500 mb-1"
+                >Experience (Years)</label
+              >
+              <input
+                type="number"
+                id="inp-exp"
+                value="3"
+                min="0"
+                required
+                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-800 outline-none transition"
+              />
+            </div>
+            <div>
+              <label
+                class="block text-xs font-bold uppercase text-slate-500 mb-1"
+                >Key Skills</label
+              >
+              <textarea
+                id="inp-skills"
+                rows="4"
+                placeholder="Java, Spring Boot, Microservices, SQL..."
+                required
+                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-800 outline-none transition"
+              ></textarea>
+            </div>
+            <button
+              type="submit"
+              class="w-full brand-gradient text-white font-bold py-3.5 rounded-lg hover:shadow-xl hover:scale-[1.02] transition transform"
+            >
+              Generate Recommendations
+            </button>
+          </form>
+        </div>
+
+        <div
+          id="panel-upload"
+          class="hidden glass-panel p-6 rounded-xl shadow-md border border-slate-200 text-center"
+        >
+          <div
+            id="drop-zone"
+            class="border-2 border-dashed border-slate-300 rounded-xl py-10 px-4 hover:bg-slate-50 hover:border-blue-400 transition cursor-pointer"
+            onclick="document.getElementById('file-upload').click()"
+          >
+            <i
+              class="fa-solid fa-cloud-arrow-up text-4xl text-slate-300 mb-3"
+            ></i>
+            <h3 class="font-semibold text-slate-600">Click to Upload Resume</h3>
+            <p class="text-xs text-slate-400 mt-1">Supported format: PDF</p>
+            <input
+              type="file"
+              id="file-upload"
+              class="hidden"
+              accept=".pdf"
+              onchange="handleFile(this.files[0])"
+            />
+          </div>
+          <p
+            id="file-name"
+            class="text-sm font-semibold text-blue-600 mt-4 hidden"
+          ></p>
+        </div>
+      </div>
+
+      <div class="lg:col-span-8">
+        <div
+          id="loader"
+          class="hidden h-full flex flex-col items-center justify-center min-h-[400px]"
+        >
+          <div
+            class="w-12 h-12 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin mb-4"
+          ></div>
+          <p class="text-slate-500 animate-pulse">
+            Analyzing capability alignment...
+          </p>
+        </div>
+
+        <div
+          id="empty-state"
+          class="h-full flex flex-col items-center justify-center min-h-[400px] text-slate-400"
+        >
+          <i class="fa-regular fa-clipboard text-6xl mb-4 opacity-20"></i>
+          <p>Enter details or upload a resume to begin.</p>
+        </div>
+
+        <div id="results-container" class="hidden space-y-4">
+          <div class="flex justify-between items-end mb-6">
+            <div>
+              <h2 class="text-2xl font-bold text-slate-800">
+                Recommended Assessments
+              </h2>
+              <p class="text-sm text-slate-500">
+                Ranked by skill overlap and role suitability.
+              </p>
+            </div>
+            <span
+              id="exp-badge"
+              class="hidden bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full"
+            ></span>
+          </div>
+          <div id="cards-wrapper"></div>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const API_MANUAL = "/api/manual";
+      const API_UPLOAD = "/api/upload";
+
+      function switchMode(mode) {
+        const mBtn = document.getElementById("tab-manual");
+        const uBtn = document.getElementById("tab-upload");
+        const mPanel = document.getElementById("panel-manual");
+        const uPanel = document.getElementById("panel-upload");
+
+        if (mode === "manual") {
+          mBtn.className =
+            "flex-1 py-2.5 text-sm font-semibold rounded-lg bg-slate-800 text-white shadow transition-all";
+          uBtn.className =
+            "flex-1 py-2.5 text-sm font-semibold rounded-lg text-slate-500 hover:bg-slate-50 transition-all";
+          mPanel.classList.remove("hidden");
+          uPanel.classList.add("hidden");
+        } else {
+          uBtn.className =
+            "flex-1 py-2.5 text-sm font-semibold rounded-lg bg-slate-800 text-white shadow transition-all";
+          mBtn.className =
+            "flex-1 py-2.5 text-sm font-semibold rounded-lg text-slate-500 hover:bg-slate-50 transition-all";
+          uPanel.classList.remove("hidden");
+          mPanel.classList.add("hidden");
+        }
+      }
+
+      document
+        .getElementById("form-manual")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          toggleLoading(true);
+          try {
+            const payload = {
+              role: document.getElementById("inp-role").value,
+              experience: parseInt(document.getElementById("inp-exp").value),
+              skills: document.getElementById("inp-skills").value.split(","),
+            };
+            const res = await fetch(API_MANUAL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            renderResults(await res.json());
+          } catch (err) {
+            alert("Error analyzing profile.");
+          }
+          toggleLoading(false);
+        });
+
+      async function handleFile(file) {
+        if (!file) return;
+        document.getElementById("file-name").textContent = file.name;
+        document.getElementById("file-name").classList.remove("hidden");
+        toggleLoading(true);
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          const res = await fetch(API_UPLOAD, {
+            method: "POST",
+            body: formData,
+          });
+          const data = await res.json();
+          renderResults(data.recommendations, data.estimated_experience);
+        } catch (err) {
+          alert("Error parsing PDF.");
+        }
+        toggleLoading(false);
+      }
+
+      function toggleLoading(show) {
+        document.getElementById("empty-state").classList.add("hidden");
+        document.getElementById("results-container").classList.add("hidden");
+        document.getElementById("loader").classList.toggle("hidden", !show);
+      }
+
+      function renderResults(list, expYear) {
+        document.getElementById("loader").classList.add("hidden");
+        document.getElementById("results-container").classList.remove("hidden");
+
+        if (expYear !== undefined) {
+          const badge = document.getElementById("exp-badge");
+          badge.textContent = `Est. Experience: ${expYear} Years`;
+          badge.classList.remove("hidden");
+        }
+
+        const wrapper = document.getElementById("cards-wrapper");
+        wrapper.innerHTML = "";
+
+        if (list.length === 0) {
+          wrapper.innerHTML =
+            '<div class="p-4 bg-yellow-50 text-yellow-800 rounded">No relevant assessments found.</div>';
+          return;
+        }
+
+        list.forEach((item, idx) => {
+          const delay = idx * 100;
+          let color =
+            item.match_score > 75
+              ? "bg-green-500"
+              : item.match_score > 50
+              ? "bg-blue-500"
+              : "bg-yellow-500";
+
+          const card = document.createElement("div");
+          card.className =
+            "bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition slide-up";
+          card.style.animationDelay = `${delay}ms`;
+
+          card.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <h3 class="text-lg font-bold text-slate-800">${
+                                  item.name
+                                }</h3>
+                                ${
+                                  item.warning
+                                    ? `<i class="fa-solid fa-triangle-exclamation text-yellow-500 text-sm" title="${item.warning}"></i>`
+                                    : ""
+                                }
+                            </div>
+                            <p class="text-sm text-slate-600">${
+                              item.description
+                            }</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-2xl font-bold text-slate-700">${
+                              item.match_score
+                            }%</span>
+                            <div class="text-[10px] uppercase text-slate-400 font-bold">Match</div>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full bg-slate-100 rounded-full h-2 mb-3">
+                        <div class="${color} h-2 rounded-full" style="width: ${
+            item.match_score
+          }%"></div>
+                    </div>
+
+                    <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-2 rounded">
+                        <i class="fa-solid fa-circle-info text-blue-400"></i>
+                        <span>${item.reason}</span>
+                    </div>
+                `;
+          wrapper.appendChild(card);
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,26 @@
+# --- Python Essentials ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Virtual Environments (IMPORTANT) ---
+# Prevents uploading thousands of library files
+venv/
+env/
+.venv/
+
+# --- Environment Variables ---
+# Never upload secrets/keys to GitHub
+.env
+
+# --- IDE Settings (Optional) ---
+.vscode/
+.idea/
+
+# --- OS Files ---
+.DS_Store
+Thumbs.db
+
+# --- Project Specific ---
+# If you decide to save uploaded resumes locally later
+uploads/
