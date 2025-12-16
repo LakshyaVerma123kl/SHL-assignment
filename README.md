@@ -1,76 +1,66 @@
-# 🎯 SHL Assessment Recommendation Engine
+# 🧠 SHL Intelligent Assessment Recommendation Engine
 
-![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.95%2B-green)
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success)
+![AI Model](https://img.shields.io/badge/Model-Sentence--Transformers-blue)
+![Architecture](https://img.shields.io/badge/Architecture-RAG-purple)
+![Compliance](https://img.shields.io/badge/PDF-Strict%20Compliance-green)
 
-An AI-powered system that recommends the best SHL assessments (Verify G+, OPQ32, etc.) based on a candidate's job role, skills, and experience. It uses **TF-IDF (Term Frequency-Inverse Document Frequency)** and **Cosine Similarity** to match candidate profiles against a catalog of psychometric tests.
+A GenAI-powered recommendation system that maps job descriptions to SHL assessments using **Semantic Retrieval-Augmented Generation (RAG)**.
 
-## 🚀 Features
-
-* **🧠 AI Matching Logic:** Uses Scikit-Learn to vectorize text and find semantic similarities between job descriptions and assessment metadata.
-* **📄 Resume Parsing:** Built-in PDF parser (using `pypdf`) that extracts text and auto-detects years of experience from resumes.
-* **⚡ FastAPI Backend:** High-performance, asynchronous Python API.
-* **🎨 Enterprise UI:** Clean, responsive dashboard built with HTML5 and Tailwind CSS (No complex frontend build steps required).
-* **🛡️ Experience Guardrails:** Automatically flags or penalizes recommendations if a candidate's experience level is too low for a specific test (e.g., Senior Management SJT).
-
-## 🛠️ Tech Stack
-
-* **Backend:** Python 3, FastAPI, Uvicorn
-* **Machine Learning:** Scikit-Learn, Pandas, NumPy
-* **Processing:** PyPDF (PDF Parsing), Regex
-* **Frontend:** HTML5, JavaScript (Vanilla), Tailwind CSS
-
-## 📦 Installation & Setup
-
-1.  **Clone the repository**
-    ```bash
-    git clone [https://github.com/LakshyaVerma123kl/SHL-assignment](https://github.com/LakshyaVerma123kl/SHL-assignment)
-    cd shl-recommender
-    ```
-
-2.  **Create a virtual environment**
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # On Windows: venv\Scripts\activate
-    ```
-
-3.  **Install dependencies**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4.  **Run the application**
-    ```bash
-    uvicorn main:app --reload
-    ```
-
-5.  **Access the Dashboard**
-    Open your browser to `http://localhost:8000`.
-
-## 📡 API Endpoints
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/` | Serves the web dashboard (UI). |
-| `POST` | `/api/manual` | Accepts JSON (`role`, `skills`, `exp`) and returns ranked recommendations. |
-| `POST` | `/api/upload` | Accepts a PDF file, parses text, estimates experience, and returns recommendations. |
-
-## 🧠 How the Recommendation Works
-
-1.  **Vectorization:** The system loads a catalog of SHL assessments (Verify, OPQ, Coding Simulations). It combines the *Name*, *Description*, and *Target Skills* into a single text block.
-2.  **TF-IDF Matrix:** It converts this catalog into a mathematical matrix.
-3.  **Query Processing:** When a user inputs data (or uploads a resume), the input is vectorized into the same space.
-4.  **Cosine Similarity:** The engine calculates the angle between the *User Vector* and every *Assessment Vector*. A smaller angle means a higher match.
-5.  **Business Logic:**
-    * *Experience Check:* If a user has 2 years exp but the test requires 4, the score is penalized by 60%.
-    * *Thresholding:* Matches below 12% relevance are discarded to reduce noise.
-
-## ☁️ Deployment
-
-This project is ready for deployment on **Render** or **Heroku**.
-* **Build Command:** `pip install -r requirements.txt`
-* **Start Command:** `uvicorn main:app --host 0.0.0.0 --port $PORT`
+This solution solves the "Keyword Mismatch" problem by using deep learning embeddings (`all-MiniLM-L6-v2`) to understand the _intent_ behind a query (e.g., matching "Team Lead" to "Personality" & "Leadership" assessments) rather than just matching words.
 
 ---
-*Created for the Assessment Tech Innovation Project.*
+
+## 🚀 Key Features
+
+### 1. 🕷️ Robust Data Ingestion (Selenium)
+
+- **Problem:** The SHL catalog uses infinite scrolling and enterprise-grade firewall protections that block standard scrapers.
+- [cite_start]**Solution:** Implemented a **Selenium-based crawler** (`scraper.py`) that mimics human browsing behavior (scrolling, lazy-loading) to successfully build a database of **380+ assessments**[cite: 53, 54].
+- **Resilience:** Includes an automated fallback generator to ensure the application never crashes, even if the target site is down.
+
+### 2. 🧠 Semantic RAG Architecture
+
+- **Vectorization:** Assessments are converted into 384-dimensional vectors based on Name, Description, and Category.
+- **Retrieval:** Uses **Cosine Similarity** to find the most relevant assessments for any natural language query.
+
+### 3. ⚖️ Balanced Retrieval Algorithm
+
+- [cite_start]**Requirement:** The system must balance recommendations when a query spans multiple domains (e.g., "Java Manager") [cite: 107-109].
+- **Implementation:** I developed an **Intent Detection Layer**. If a query implies both _Technical_ and _Behavioral_ needs, the engine switches to an **Interleaving Mode**, ensuring the top results contain a mix of _Knowledge & Skills_ and _Personality_ assessments.
+
+### 4. 📊 Automated Evaluation
+
+- [cite_start]**Metric:** Optimized for **Mean Recall@10**[cite: 106].
+- **Tool:** Includes `evaluation.py` to run batch predictions against the training set and calculate accuracy scores automatically.
+
+---
+
+## 🛠️ Project Structure
+
+| File                     | Description                                                                     |
+| :----------------------- | :------------------------------------------------------------------------------ |
+| `main.py`                | **The Core API.** FastAPI backend with RAG logic and PDF-compliant endpoints.   |
+| `scraper.py`             | **The Data Pipeline.** Selenium script to crawl SHL.com and build the database. |
+| `evaluation.py`          | **The Judge.** Script to measure Mean Recall@10 against test queries.           |
+| `generate_submission.py` | **The Helper.** Generates the `firstname_lastname.csv` for submission.          |
+| `generate_pdf.py`        | **The Reporter.** Generates the 2-page technical approach PDF.                  |
+| `static/index.html`      | **The Dashboard.** Enterprise UI with Tabular view and CSV export.              |
+| `Dockerfile`             | **The Container.** Ensures reproducibility across environments.                 |
+
+---
+
+## ⚡ Setup & Execution
+
+### 1. Prerequisites
+
+- Python 3.9+
+- Google Chrome (for the Scraper)
+
+### 2. Installation
+
+```bash
+git clone [https://github.com/LakshyaVerma123kl/SHL-assignment](https://github.com/LakshyaVerma123kl/SHL-assignment)
+cd shl-assessment-engine
+pip install -r requirements.txt
+```
