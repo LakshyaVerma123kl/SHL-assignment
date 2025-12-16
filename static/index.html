@@ -2,27 +2,36 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>SHL Assessment Architect</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SHL Assessment Architect</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
       rel="stylesheet"
     />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-      .brand-gradient {
-        background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+      .shl-blue {
+        background-color: #004b87;
+      } /* Official SHL Brand Color */
+      .shl-blue-light {
+        background-color: #0099ce;
       }
       .glass-panel {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
+        background: white;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
       }
-      .slide-up {
-        animation: slideUp 0.5s ease-out forwards;
-        opacity: 0;
-        transform: translateY(20px);
+      tr:nth-child(even) {
+        background-color: #f8fafc;
       }
-      @keyframes slideUp {
+      .fade-in {
+        animation: fadeIn 0.5s ease-in;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
         to {
           opacity: 1;
           transform: translateY(0);
@@ -30,324 +39,250 @@
       }
     </style>
   </head>
-  <body class="bg-slate-100 min-h-screen text-slate-800 font-sans">
-    <nav class="brand-gradient text-white shadow-lg sticky top-0 z-50">
+  <body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
+    <nav class="shl-blue text-white shadow-lg sticky top-0 z-50">
       <div
-        class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center"
+        class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center"
       >
         <div class="flex items-center gap-3">
-          <i class="fa-solid fa-layer-group text-2xl text-blue-400"></i>
+          <i class="fa-solid fa-layer-group text-2xl text-blue-300"></i>
           <div>
             <h1 class="text-xl font-bold tracking-wide">SHL Architect</h1>
-            <p class="text-xs text-slate-400 uppercase tracking-wider">
-              Assessment Recommendation Engine
+            <p class="text-xs text-blue-200 uppercase tracking-wider">
+              AI Recommendation Engine
             </p>
           </div>
         </div>
-        <div
-          class="text-xs bg-blue-500/20 px-3 py-1 rounded-full border border-blue-500/30"
-        >
-          v2.0 Enterprise
+        <div class="flex gap-4">
+          <a
+            href="/docs"
+            target="_blank"
+            class="text-sm hover:text-blue-200 transition"
+            ><i class="fa-solid fa-book"></i> API Docs</a
+          >
+          <span
+            class="text-xs bg-blue-600/50 px-3 py-1 rounded border border-blue-400/30"
+            >v2.1 Production</span
+          >
         </div>
       </div>
     </nav>
 
-    <main
-      class="max-w-6xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-12 gap-8"
-    >
-      <div class="lg:col-span-4 space-y-6">
-        <div
-          class="bg-white p-1 rounded-xl shadow-sm border border-slate-200 flex"
-        >
+    <main class="max-w-7xl mx-auto px-6 py-8">
+      <div class="glass-panel rounded-xl p-8 mb-8 border border-slate-200">
+        <label class="block text-sm font-bold text-slate-500 uppercase mb-2">
+          <i class="fa-solid fa-magnifying-glass mr-1"></i> Job Description /
+          Query
+        </label>
+        <div class="flex flex-col md:flex-row gap-4">
+          <textarea
+            id="query"
+            rows="2"
+            placeholder="e.g., 'Looking for a Senior Java Developer who can also lead a team and has good communication skills.'"
+            class="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 outline-none transition text-lg"
+          ></textarea>
           <button
-            onclick="switchMode('manual')"
-            id="tab-manual"
-            class="flex-1 py-2.5 text-sm font-semibold rounded-lg bg-slate-800 text-white shadow transition-all"
+            onclick="getRecs()"
+            class="shl-blue hover:bg-blue-800 text-white font-bold px-8 py-3 rounded-lg shadow-md transition transform active:scale-95 whitespace-nowrap flex items-center justify-center gap-2"
           >
-            <i class="fa-solid fa-keyboard mr-2"></i>Manual
-          </button>
-          <button
-            onclick="switchMode('upload')"
-            id="tab-upload"
-            class="flex-1 py-2.5 text-sm font-semibold rounded-lg text-slate-500 hover:bg-slate-50 transition-all"
-          >
-            <i class="fa-solid fa-file-pdf mr-2"></i>Resume
+            Analyze & Recommend
           </button>
         </div>
-
-        <div
-          id="panel-manual"
-          class="glass-panel p-6 rounded-xl shadow-md border border-slate-200"
-        >
-          <form id="form-manual" class="space-y-5">
-            <div>
-              <label
-                class="block text-xs font-bold uppercase text-slate-500 mb-1"
-                >Job Role</label
-              >
-              <input
-                type="text"
-                id="inp-role"
-                placeholder="e.g. Senior Java Developer"
-                required
-                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-800 focus:border-transparent outline-none transition"
-              />
-            </div>
-            <div>
-              <label
-                class="block text-xs font-bold uppercase text-slate-500 mb-1"
-                >Experience (Years)</label
-              >
-              <input
-                type="number"
-                id="inp-exp"
-                value="3"
-                min="0"
-                required
-                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-800 outline-none transition"
-              />
-            </div>
-            <div>
-              <label
-                class="block text-xs font-bold uppercase text-slate-500 mb-1"
-                >Key Skills</label
-              >
-              <textarea
-                id="inp-skills"
-                rows="4"
-                placeholder="Java, Spring Boot, Microservices, SQL..."
-                required
-                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-800 outline-none transition"
-              ></textarea>
-            </div>
-            <button
-              type="submit"
-              class="w-full brand-gradient text-white font-bold py-3.5 rounded-lg hover:shadow-xl hover:scale-[1.02] transition transform"
-            >
-              Generate Recommendations
-            </button>
-          </form>
-        </div>
-
-        <div
-          id="panel-upload"
-          class="hidden glass-panel p-6 rounded-xl shadow-md border border-slate-200 text-center"
-        >
-          <div
-            id="drop-zone"
-            class="border-2 border-dashed border-slate-300 rounded-xl py-10 px-4 hover:bg-slate-50 hover:border-blue-400 transition cursor-pointer"
-            onclick="document.getElementById('file-upload').click()"
+        <div class="mt-4 flex flex-wrap gap-2 text-sm text-slate-500">
+          <span class="font-semibold">Quick Fill:</span>
+          <button
+            class="hover:text-blue-600 underline decoration-dotted"
+            onclick="fillQuery('Graduate accountant with numerical skills')"
           >
-            <i
-              class="fa-solid fa-cloud-arrow-up text-4xl text-slate-300 mb-3"
-            ></i>
-            <h3 class="font-semibold text-slate-600">Click to Upload Resume</h3>
-            <p class="text-xs text-slate-400 mt-1">Supported format: PDF</p>
-            <input
-              type="file"
-              id="file-upload"
-              class="hidden"
-              accept=".pdf"
-              onchange="handleFile(this.files[0])"
-            />
-          </div>
-          <p
-            id="file-name"
-            class="text-sm font-semibold text-blue-600 mt-4 hidden"
-          ></p>
+            Graduate Accountant
+          </button>
+          <span class="text-slate-300">|</span>
+          <button
+            class="hover:text-blue-600 underline decoration-dotted"
+            onclick="fillQuery('Java Tech Lead with agile experience')"
+          >
+            Tech Lead
+          </button>
+          <span class="text-slate-300">|</span>
+          <button
+            class="hover:text-blue-600 underline decoration-dotted"
+            onclick="fillQuery('Sales Executive driven by targets')"
+          >
+            Sales
+          </button>
         </div>
       </div>
 
-      <div class="lg:col-span-8">
+      <div id="loading" class="hidden py-12 text-center">
         <div
-          id="loader"
-          class="hidden h-full flex flex-col items-center justify-center min-h-[400px]"
-        >
-          <div
-            class="w-12 h-12 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin mb-4"
-          ></div>
-          <p class="text-slate-500 animate-pulse">
-            Analyzing capability alignment...
-          </p>
+          class="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-blue-600 mx-auto mb-4"
+        ></div>
+        <p class="text-slate-600 font-medium animate-pulse">
+          Running Semantic Search (RAG)...
+        </p>
+        <p class="text-xs text-slate-400 mt-1">
+          Balancing Technical & Behavioral assessments
+        </p>
+      </div>
+
+      <div id="results-area" class="hidden fade-in">
+        <div class="flex justify-between items-end mb-4">
+          <h2 class="text-2xl font-bold text-slate-800">
+            Recommended Assessments
+          </h2>
+          <button
+            onclick="downloadCSV()"
+            class="text-sm bg-white border border-slate-300 text-slate-600 px-4 py-2 rounded hover:bg-slate-50 transition"
+          >
+            <i class="fa-solid fa-file-csv mr-2 text-green-600"></i> Download
+            CSV
+          </button>
         </div>
 
         <div
-          id="empty-state"
-          class="h-full flex flex-col items-center justify-center min-h-[400px] text-slate-400"
+          class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
         >
-          <i class="fa-regular fa-clipboard text-6xl mb-4 opacity-20"></i>
-          <p>Enter details or upload a resume to begin.</p>
-        </div>
-
-        <div id="results-container" class="hidden space-y-4">
-          <div class="flex justify-between items-end mb-6">
-            <div>
-              <h2 class="text-2xl font-bold text-slate-800">
-                Recommended Assessments
-              </h2>
-              <p class="text-sm text-slate-500">
-                Ranked by skill overlap and role suitability.
-              </p>
-            </div>
-            <span
-              id="exp-badge"
-              class="hidden bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full"
-            ></span>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr
+                  class="bg-slate-100 text-slate-600 text-sm uppercase tracking-wider border-b border-slate-200"
+                >
+                  <th class="p-4 font-bold w-16">Rank</th>
+                  <th class="p-4 font-bold">Assessment Name</th>
+                  <th class="p-4 font-bold">Type</th>
+                  <th class="p-4 font-bold w-24">Match</th>
+                  <th class="p-4 font-bold w-24">Duration</th>
+                  <th class="p-4 font-bold w-32">Action</th>
+                </tr>
+              </thead>
+              <tbody
+                id="table-body"
+                class="text-sm text-slate-700 divide-y divide-slate-100"
+              ></tbody>
+            </table>
           </div>
-          <div id="cards-wrapper"></div>
         </div>
+
+        <p class="mt-4 text-xs text-center text-slate-400">
+          * Rankings based on cosine similarity of 'all-MiniLM-L6-v2'
+          embeddings.
+        </p>
       </div>
     </main>
 
     <script>
-      const API_MANUAL = "/api/manual";
-      const API_UPLOAD = "/api/upload";
+      let currentResults = [];
 
-      function switchMode(mode) {
-        const mBtn = document.getElementById("tab-manual");
-        const uBtn = document.getElementById("tab-upload");
-        const mPanel = document.getElementById("panel-manual");
-        const uPanel = document.getElementById("panel-upload");
-
-        if (mode === "manual") {
-          mBtn.className =
-            "flex-1 py-2.5 text-sm font-semibold rounded-lg bg-slate-800 text-white shadow transition-all";
-          uBtn.className =
-            "flex-1 py-2.5 text-sm font-semibold rounded-lg text-slate-500 hover:bg-slate-50 transition-all";
-          mPanel.classList.remove("hidden");
-          uPanel.classList.add("hidden");
-        } else {
-          uBtn.className =
-            "flex-1 py-2.5 text-sm font-semibold rounded-lg bg-slate-800 text-white shadow transition-all";
-          mBtn.className =
-            "flex-1 py-2.5 text-sm font-semibold rounded-lg text-slate-500 hover:bg-slate-50 transition-all";
-          uPanel.classList.remove("hidden");
-          mPanel.classList.add("hidden");
-        }
+      function fillQuery(text) {
+        document.getElementById("query").value = text;
       }
 
-      document
-        .getElementById("form-manual")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          toggleLoading(true);
-          try {
-            const payload = {
-              role: document.getElementById("inp-role").value,
-              experience: parseInt(document.getElementById("inp-exp").value),
-              skills: document.getElementById("inp-skills").value.split(","),
-            };
-            const res = await fetch(API_MANUAL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
-            });
-            renderResults(await res.json());
-          } catch (err) {
-            alert("Error analyzing profile.");
-          }
-          toggleLoading(false);
-        });
+      async function getRecs() {
+        const query = document.getElementById("query").value.trim();
+        if (!query) return alert("Please enter a job description or query.");
 
-      async function handleFile(file) {
-        if (!file) return;
-        document.getElementById("file-name").textContent = file.name;
-        document.getElementById("file-name").classList.remove("hidden");
-        toggleLoading(true);
-
-        const formData = new FormData();
-        formData.append("file", file);
+        // UI Reset
+        document.getElementById("loading").classList.remove("hidden");
+        document.getElementById("results-area").classList.add("hidden");
+        document.getElementById("table-body").innerHTML = "";
 
         try {
-          const res = await fetch(API_UPLOAD, {
+          const res = await fetch("/recommend", {
             method: "POST",
-            body: formData,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: query }),
           });
+
+          if (!res.ok) throw new Error("API Error");
+
           const data = await res.json();
-          renderResults(data.recommendations, data.estimated_experience);
-        } catch (err) {
-          alert("Error parsing PDF.");
+          currentResults = data.recommended_assessments;
+          renderTable(currentResults);
+        } catch (e) {
+          alert("Connection Failed. Ensure backend is running: " + e.message);
+        } finally {
+          document.getElementById("loading").classList.add("hidden");
+          document.getElementById("results-area").classList.remove("hidden");
         }
-        toggleLoading(false);
       }
 
-      function toggleLoading(show) {
-        document.getElementById("empty-state").classList.add("hidden");
-        document.getElementById("results-container").classList.add("hidden");
-        document.getElementById("loader").classList.toggle("hidden", !show);
-      }
+      function renderTable(items) {
+        const tbody = document.getElementById("table-body");
 
-      function renderResults(list, expYear) {
-        document.getElementById("loader").classList.add("hidden");
-        document.getElementById("results-container").classList.remove("hidden");
-
-        if (expYear !== undefined) {
-          const badge = document.getElementById("exp-badge");
-          badge.textContent = `Est. Experience: ${expYear} Years`;
-          badge.classList.remove("hidden");
-        }
-
-        const wrapper = document.getElementById("cards-wrapper");
-        wrapper.innerHTML = "";
-
-        if (list.length === 0) {
-          wrapper.innerHTML =
-            '<div class="p-4 bg-yellow-50 text-yellow-800 rounded">No relevant assessments found.</div>';
+        if (items.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="6" class="p-6 text-center text-slate-500">No relevant assessments found.</td></tr>';
           return;
         }
 
-        list.forEach((item, idx) => {
-          const delay = idx * 100;
-          let color =
+        items.forEach((item, index) => {
+          // Formatting
+          const scoreClass =
             item.match_score > 75
-              ? "bg-green-500"
+              ? "text-green-600 bg-green-50"
               : item.match_score > 50
-              ? "bg-blue-500"
-              : "bg-yellow-500";
+              ? "text-blue-600 bg-blue-50"
+              : "text-yellow-600 bg-yellow-50";
+          const types = item.test_type
+            .map(
+              (t) =>
+                `<span class="inline-block bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded border border-slate-200 mr-1 mb-1">${t}</span>`
+            )
+            .join("");
 
-          const card = document.createElement("div");
-          card.className =
-            "bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition slide-up";
-          card.style.animationDelay = `${delay}ms`;
-
-          card.innerHTML = `
-                    <div class="flex justify-between items-start mb-3">
-                        <div>
-                            <div class="flex items-center gap-2 mb-1">
-                                <h3 class="text-lg font-bold text-slate-800">${
-                                  item.name
-                                }</h3>
-                                ${
-                                  item.warning
-                                    ? `<i class="fa-solid fa-triangle-exclamation text-yellow-500 text-sm" title="${item.warning}"></i>`
-                                    : ""
-                                }
-                            </div>
-                            <p class="text-sm text-slate-600">${
-                              item.description
-                            }</p>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-2xl font-bold text-slate-700">${
-                              item.match_score
-                            }%</span>
-                            <div class="text-[10px] uppercase text-slate-400 font-bold">Match</div>
-                        </div>
-                    </div>
-                    
-                    <div class="w-full bg-slate-100 rounded-full h-2 mb-3">
-                        <div class="${color} h-2 rounded-full" style="width: ${
+          const row = `
+                <tr class="hover:bg-blue-50/30 transition group">
+                    <td class="p-4 font-bold text-slate-400">#${index + 1}</td>
+                    <td class="p-4">
+                        <div class="font-bold text-slate-800">${item.name}</div>
+                        <div class="text-xs text-slate-500 mt-1 truncate max-w-md" title="${
+                          item.description
+                        }">${item.description}</div>
+                    </td>
+                    <td class="p-4 align-top">${types}</td>
+                    <td class="p-4">
+                        <span class="${scoreClass} px-2 py-1 rounded font-bold text-xs">${
             item.match_score
-          }%"></div>
-                    </div>
-
-                    <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-2 rounded">
-                        <i class="fa-solid fa-circle-info text-blue-400"></i>
-                        <span>${item.reason}</span>
-                    </div>
-                `;
-          wrapper.appendChild(card);
+          }%</span>
+                    </td>
+                    <td class="p-4 text-slate-500">
+                        <i class="fa-regular fa-clock mr-1"></i>${
+                          item.duration
+                        }m
+                    </td>
+                    <td class="p-4">
+                        <a href="${
+                          item.url
+                        }" target="_blank" class="text-blue-600 hover:text-blue-800 font-semibold text-xs border border-blue-200 hover:border-blue-600 px-3 py-1.5 rounded transition bg-white">
+                            View <i class="fa-solid fa-arrow-up-right-from-square ml-1"></i>
+                        </a>
+                    </td>
+                </tr>`;
+          tbody.innerHTML += row;
         });
+      }
+
+      function downloadCSV() {
+        if (!currentResults.length) return;
+
+        let csv = "Rank,Assessment Name,Match Score,Type,Duration,URL\n";
+        currentResults.forEach((item, index) => {
+          const types = item.test_type.join("; ");
+          csv += `${index + 1},"${item.name}",${item.match_score},"${types}",${
+            item.duration
+          },"${item.url}"\n`;
+        });
+
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.setAttribute("hidden", "");
+        a.setAttribute("href", url);
+        a.setAttribute("download", "shl_recommendations.csv");
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
       }
     </script>
   </body>

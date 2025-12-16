@@ -1,7 +1,13 @@
 fastapi
 uvicorn[standard]
+requests
+beautifulsoup4
+sentence-transformers
+torch
 scikit-learn
-pandas
-pypdf
+numpy
 python-multipart
 jinja2
+selenium
+webdriver-manager
+pandas

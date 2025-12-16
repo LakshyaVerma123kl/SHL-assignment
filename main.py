@@ -1,186 +1,158 @@
-import pandas as pd
-import re
-import io
+import json
 import logging
-from fastapi import FastAPI, UploadFile, File, HTTPException
+import os
+import numpy as np
+from typing import List, Optional
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional
-from sklearn.feature_extraction.text import TfidfVectorizer
+# RAG Libraries
+from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-from pypdf import PdfReader
-import uvicorn
 
-# --- CONFIGURATION & LOGGING ---
+# --- CONFIGURATION ---
+DATA_PATH = "data/shl_assessments.json"
+MODEL_NAME = 'all-MiniLM-L6-v2'  # Fast & Accurate Semantic Model
+
+# Setup App
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("SHL-RAG")
+app = FastAPI(title="SHL RAG Engine", version="2.0")
 
-# --- 1. THE ENHANCED CATALOGUE ---
-# expanded with more realistic SHL test types
-assessment_catalog = [
-    {
-        "id": "shl_001",
-        "name": "SHL Verify G+ (General Ability)",
-        "description": "The gold standard for cognitive ability. Tests numerical, deductive, and inductive reasoning.",
-        "skills": ["problem solving", "critical thinking", "logic", "aptitude", "general intelligence"],
-        "min_experience": 0,
-        "difficulty": "Medium"
-    },
-    {
-        "id": "shl_002",
-        "name": "SHL OPQ32 (Occupational Personality)",
-        "description": "Deep behavioral analysis. Measures influence, empathy, structure, and dynamism.",
-        "skills": ["leadership", "communication", "culture fit", "sales", "hr", "psychology", "teamwork"],
-        "min_experience": 0,
-        "difficulty": "N/A"
-    },
-    {
-        "id": "shl_003",
-        "name": "SHL Coding: Python/Java Algorithms",
-        "description": "Hardcore engineering simulation. Tests syntax, optimization, and bug fixing.",
-        "skills": ["python", "java", "backend", "software engineering", "algorithms", "data structures"],
-        "min_experience": 1,
-        "difficulty": "Hard"
-    },
-    {
-        "id": "shl_004",
-        "name": "SHL Front-End (React/Angular)",
-        "description": "Browser-based coding tasks involving DOM manipulation, hooks, and CSS styling.",
-        "skills": ["react", "javascript", "frontend", "typescript", "css", "html", "web design"],
-        "min_experience": 1,
-        "difficulty": "Medium"
-    },
-    {
-        "id": "shl_005",
-        "name": "SHL Managerial Scenarios (SJT)",
-        "description": "Situational judgment for leaders. Focuses on conflict resolution and strategic resource allocation.",
-        "skills": ["management", "strategy", "director", "vp", "leadership", "conflict resolution", "planning"],
-        "min_experience": 4,
-        "difficulty": "Very Hard"
-    },
-    {
-        "id": "shl_006",
-        "name": "SHL Numerical Calculation",
-        "description": "Speed and accuracy test for data entry, finance, and administrative roles.",
-        "skills": ["accounting", "finance", "data entry", "admin", "accuracy", "math", "excel"],
-        "min_experience": 0,
-        "difficulty": "Easy"
-    }
-]
-
-# --- 2. THE RECOMMENDATION ENGINE ---
-class Recommender:
-    def __init__(self):
-        self.df = pd.DataFrame(assessment_catalog)
-        # Create a rich "soup" of text for matching
-        self.df['features'] = (
-            self.df['name'] + " " + 
-            self.df['description'] + " " + 
-            self.df['skills'].apply(lambda x: " ".join(x))
-        ).str.lower()
-        
-        self.vectorizer = TfidfVectorizer(stop_words='english')
-        self.tfidf_matrix = self.vectorizer.fit_transform(self.df['features'])
-
-    def predict(self, text_input: str, experience: int):
-        # Vectorize user input
-        user_vec = self.vectorizer.transform([text_input.lower()])
-        cosine_sim = cosine_similarity(user_vec, self.tfidf_matrix).flatten()
-
-        results = []
-        for idx, score in enumerate(cosine_sim):
-            row = self.df.iloc[idx]
-            final_score = score
-            
-            # Experience Penalty Logic
-            exp_gap = False
-            if experience < row['min_experience']:
-                final_score *= 0.4  # Heavy penalty for under-qualified
-                exp_gap = True
-
-            if final_score > 0.12:  # Threshold to cut noise
-                # Explainability: Find which user words matched the catalog
-                matched_keywords = [
-                    word for word in row['skills'] 
-                    if word in text_input.lower()
-                ]
-                reason = f"Matches skills: {', '.join(matched_keywords[:3])}" if matched_keywords else "Matched based on role description."
-                
-                results.append({
-                    "name": row['name'],
-                    "description": row['description'],
-                    "match_score": int(round(final_score * 100)),
-                    "reason": reason,
-                    "warning": f"Requires {row['min_experience']}+ years exp." if exp_gap else None
-                })
-        
-        return sorted(results, key=lambda x: x['match_score'], reverse=True)
-
-# --- 3. THE API SETUP ---
-app = FastAPI(title="SHL Architect")
-engine = Recommender()
-
-# Enable CORS for production safety
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Serve Static UI
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# --- ENGINE LOGIC ---
+class AssessmentEngine:
+    def __init__(self):
+        self.assessments = []
+        self.embeddings = None
+        self.model = None
+        
+        # Initialize
+        self.load_data()
+        self.init_model()
 
-class ManualInput(BaseModel):
-    role: str
-    skills: List[str]
-    experience: int
+    def load_data(self):
+        if not os.path.exists(DATA_PATH):
+            logger.warning("⚠️ Data file not found! Please run scraper.py. Loading dummy data.")
+            self.assessments = [
+                {"name": "Python Coding Assessment", "description": "Tests coding skills in Python.", "test_type": ["Knowledge & Skills"], "url": "#", "duration": 45},
+                {"name": "OPQ32 Personality", "description": "Workplace behavioral style.", "test_type": ["Personality & Behavior"], "url": "#", "duration": 30}
+            ]
+        else:
+            with open(DATA_PATH, 'r') as f:
+                self.assessments = json.load(f)
+
+    def init_model(self):
+        logger.info("🧠 Loading Neural Model (Sentence-Transformers)...")
+        self.model = SentenceTransformer(MODEL_NAME)
+        
+        # Create "Context" for each assessment (Name + Description + Type)
+        corpus = [
+            f"{item['name']} {item['description']} {' '.join(item['test_type'])}" 
+            for item in self.assessments
+        ]
+        self.embeddings = self.model.encode(corpus)
+        logger.info("✅ Model Ready.")
+
+    def search(self, query: str, top_k: int = 10):
+        # 1. Vectorize Query
+        query_vec = self.model.encode([query])
+        
+        # 2. Semantic Search (Cosine Similarity)
+        scores = cosine_similarity(query_vec, self.embeddings)[0]
+        
+        # 3. Sort Results
+        top_indices = np.argsort(scores)[::-1]
+        
+        # 4. Balanced Retrieval Algorithm (Assignment Requirement)
+        # If query implies "Technical" AND "Behavioral", force diversity.
+        q_lower = query.lower()
+        needs_tech = any(w in q_lower for w in ['java', 'python', 'code', 'technical', 'skill'])
+        needs_soft = any(w in q_lower for w in ['lead', 'team', 'communicate', 'behavior', 'manager'])
+        
+        results = []
+        seen = set()
+        
+        # Buckets for balancing
+        tech_picks = []
+        soft_picks = []
+        
+        for idx in top_indices:
+            score = float(scores[idx])
+            if score < 0.2: continue # Noise filter
+            
+            item = self.assessments[idx].copy()
+            item['score'] = round(score * 100, 1)
+            
+            # Classify item
+            types = " ".join(item['test_type']).lower()
+            is_soft = "personality" in types or "behavior" in types
+            
+            if needs_tech and needs_soft:
+                # Force bucket logic
+                if is_soft: soft_picks.append(item)
+                else: tech_picks.append(item)
+            else:
+                # Standard Logic
+                results.append(item)
+                
+            if len(results) >= top_k: break
+
+        # Merge buckets if balancing was triggered
+        if needs_tech and needs_soft:
+            # Interleave results: 1 Tech, 1 Soft, 1 Tech...
+            import itertools
+            for t, s in itertools.zip_longest(tech_picks, soft_picks):
+                if t and t['url'] not in seen: 
+                    results.append(t); seen.add(t['url'])
+                if s and s['url'] not in seen: 
+                    results.append(s); seen.add(s['url'])
+        
+        return results[:top_k]
+
+# Initialize Engine
+engine = AssessmentEngine()
+
+# --- API ENDPOINTS ---
+class QueryRequest(BaseModel):
+    query: str
+
+@app.post("/recommend")
+def recommend(req: QueryRequest):
+    recs = engine.search(req.query)
+    
+    # Format for PDF Requirement
+    formatted = []
+    for r in recs:
+        formatted.append({
+            "name": r['name'],
+            "url": r['url'],
+            "description": r['description'][:200] + "...",
+            "test_type": r['test_type'],
+            "duration": r.get('duration', 0),
+            "match_score": r.get('score', 0)
+        })
+    return {"recommended_assessments": formatted}
+
+@app.get("/health")
+def health():
+    return {"status": "healthy", "model": MODEL_NAME}
+
+# Serve Frontend
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 def serve_ui():
-    return FileResponse('static/index.html')
-
-@app.post("/api/manual")
-def recommend_manual(data: ManualInput):
-    query = f"{data.role} {' '.join(data.skills)}"
-    return engine.predict(query, data.experience)
-
-@app.post("/api/upload")
-async def recommend_upload(file: UploadFile = File(...)):
-    if file.content_type != "application/pdf":
-        raise HTTPException(400, "Only PDF files are supported.")
-    
-    try:
-        content = await file.read()
-        reader = PdfReader(io.BytesIO(content))
-        text = " ".join([p.extract_text() for p in reader.pages])
-        
-        # Smart Heuristic for Experience
-        # Looks for 4-digit years (2015-2025) and estimates duration
-        years_found = re.findall(r'\b(20[0-2][0-9])\b', text)
-        est_exp = 2 # default fallback
-        if years_found:
-            yrs = sorted([int(y) for y in years_found])
-            if len(yrs) > 1:
-                est_exp = yrs[-1] - yrs[0]
-        
-        # Clamp experience to realistic range
-        est_exp = max(0, min(est_exp, 25))
-        
-        recs = engine.predict(text, est_exp)
-        
-        return {
-            "estimated_experience": est_exp,
-            "preview": text[:150] + "...",
-            "recommendations": recs
-        }
-        
-    except Exception as e:
-        logger.error(f"Error parsing PDF: {e}")
-        raise HTTPException(500, "Could not parse PDF. Ensure it is text-readable.")
+    return FileResponse("static/index.html")
 
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
