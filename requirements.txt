@@ -1,13 +1,10 @@
-fastapi
-uvicorn[standard]
-requests
-beautifulsoup4
-sentence-transformers
-torch
+fastapi==0.95.2
+uvicorn[standard]==0.22.0
+requests==2.31.0
+beautifulsoup4==4.12.2
 scikit-learn
+pandas
 numpy
 python-multipart
 jinja2
-selenium
-webdriver-manager
-pandas
+# Removed torch and sentence-transformers to fit in 512MB RAM
